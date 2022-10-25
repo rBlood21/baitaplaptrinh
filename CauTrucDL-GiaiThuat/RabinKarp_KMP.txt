@@ -1,0 +1,224 @@
+﻿#include <stdio.h>
+#include <conio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+
+
+
+void LayDL (FILE* f, char* &p, char* &s, int &m, int &n)
+{
+		fscanf(f, "%d", &n);
+		fscanf(f, "%d", &m);
+	
+		p = new char[n];
+		s = new char[m];
+
+		fscanf(f, "\n");
+		fgets(p, n+1, f);
+		fscanf(f, "\n");
+		fgets(s, m+1, f);         // Phải lấy dấu \n trước khi lấy một chuỗi sau khi lấy một số.
+}
+
+// Rabin-Krap
+int RollingHash (char* bam, int i, int length, int b)
+{
+	int tong = 0;
+	int n = length - 1;
+	for(int j = i; j < length + i; j++)
+	{
+		tong += bam[j] * (int)pow((float)b, n);
+		n--;
+	}
+	return tong;
+}
+
+
+bool BruteForce (char* s, char* p, int m, int n, int j)
+{
+	int l = 0;
+	for(int i = j; i < j + n; i++)
+	{
+		if(s[i] != p[l++])
+			return false;
+	}
+	return true;
+}
+void RabinKrap (char* s, char* p, int m, int n, bool &find, int &times, int* vitri, int &vt)
+{
+	find = false;
+	times = 0;
+	vt = 0;
+	int hp = RollingHash(p, 0, n, 2);
+	int h0 = RollingHash(s, 0, n, 2);
+	for(int i = 0; i < m - n; i++)
+	{
+		if(hp == h0)
+		{
+			times ++;
+			if(BruteForce(s, p, m, n, i))
+			{
+				find = true;		
+				vitri[vt++] = i;
+			}
+		}
+		h0 = 2 * ( h0 - s[i] * (int)pow((float)2, n-1)) + s[i + n];
+	}
+	
+}
+
+
+
+
+// KMP
+void initNEXT_MP(char *p, int* NEXT) 
+{
+	int i, j;
+	int m = strlen(p);
+	i = 0;
+	NEXT[0] = -1;
+	j = NEXT[0];
+	
+
+	while (i < m-1) 
+	{
+		if (j == -1 || p[i] == p[j]) 
+		{
+			i++;
+			j++;
+			if (p[i] != p[j])
+				NEXT[i] = j;
+			else
+				NEXT[i] = NEXT[j]; 
+		}
+		else 
+			j = NEXT[j];
+	}
+}
+int KMP(char* s, char* p, int n, int m, int* NEXT)
+{
+	initNEXT_MP(p, NEXT);
+	int i = 0;
+	int j = 0;
+	while (i < m)
+    {
+        if (j == -1)
+        {
+            i++;
+            j = 0;
+        }
+        else if (s[i] == p[j])
+        {
+            i++;
+            j++;
+            if (j == n)
+                return i - n;
+        }
+        else
+            j = NEXT[j];
+    }
+    return 0;
+}
+
+
+
+// Hàm xuất kết quả tìm kiếm của Rabin-Krap
+void XuatRabin (FILE* h, bool find, int times, int* vitri, int vt)
+{
+	fprintf(h, "%s", " Rabin-Karp : \n");
+	fprintf(h, "\n%s", " + Ket qua : ");
+	if(find)
+	{
+		fprintf(h, "tim thay.!");
+		fprintf(h, "\n%s", " + Vi tri tim thay : ");
+		for(int i = 0; i < vt; i++)
+		{
+			fprintf(h, " %d ", vitri[i] );
+		}
+	}
+	else
+	{
+		fprintf(h, "khong tim thay.!");
+		fprintf(h, "\n%s", " + Vi tri tim thay : ");
+		fprintf(h, " ");
+	}
+
+	fprintf(h, "\n");
+	fprintf(h, "%s", " + So lan so sanh chi tiet : ");
+	fprintf(h, "%d", times);
+	fprintf(h, "\n");
+	fprintf(h, "\n");
+	fprintf(h, "\n");
+
+}
+
+// Hàm xuất kết quả tìm kiếm của KMB
+void XuatKMB (FILE* h, int co, int* NEXT, int nNEXT)
+{
+
+	fprintf(h, "%s", " KMB : \n");
+	fprintf(h, "%s", "  + NEXT : ");      // Xuat mang kmb
+	for(int i = 0; i < nNEXT; i++)
+	{
+		fprintf(h, " %d ", NEXT[i] );
+	}
+	fprintf(h, "\n");
+	fprintf(h, "%s", "  + Ket qua : ");
+	if(co)
+	{
+		fprintf(h, "tim thay.!");
+		fprintf(h, "\n%s", "  + Vi tri tim thay : ");
+		fprintf(h, "%d ", co );
+	}
+	else
+	{
+		fprintf(h, "khong tim thay.!");
+		fprintf(h, "\n%s", "  + Vi tri tim thay : ");
+		fprintf(h, " ");
+	}
+	
+
+
+}
+
+
+
+void main(int argc, char* argv[])
+{
+	if(argc == 3)
+	{
+		char* s;
+		char* p;
+		int vitri[100];
+		int vt, times, m, n, nNEXT;
+		bool find;
+		int* NEXT;
+
+
+		FILE* f = fopen (argv[1], "rt");
+		if(f != NULL)
+		{
+			LayDL (f, p, s, m, n);
+			fclose(f);
+			NEXT = new int[n];
+			nNEXT = n;
+
+			RabinKrap (s, p, m, n, find, times, vitri, vt);
+
+			int co = KMP(s, p, n, m, NEXT);
+			FILE* h = fopen (argv[2], "w+");
+			if(h != NULL)
+			{
+				XuatRabin (h, find, times, vitri, vt);
+				XuatKMB (h, co, NEXT, nNEXT);
+				fclose(h);
+				printf("Thanh cong roi nha.!\n");
+			}
+		
+		}
+		else
+			printf("Khong mo file duoc.!\n");
+	}
+	else
+		printf("Tham so dong lenh nhap sai.!\n");
+}
